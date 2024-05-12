@@ -5,9 +5,14 @@ import pandas as pd
 import aiohttp
 import nest_asyncio
 import asyncio
+import csv
 
 nest_asyncio.apply()
 
+def save_to_csv(comments):
+    with open('output.csv', 'w') as myfile:
+        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+        wr.writerow(comments)
 
 # defining a function scrape which will take the search query as input and
 # output the resulting posts and their respective comments/replies into a csv file
@@ -29,7 +34,6 @@ async def scrape(search_query):
     try:
         subreddit = await reddit.subreddit("all")
         search_results_count = 0
-        posts = {}
         post_comments = []
         async for submission in subreddit.search(search_query, sort, syntax, time_filter):
             if submission.ups > 10:
@@ -48,24 +52,23 @@ async def scrape(search_query):
                 else:
                     print("Subreddit is None")
 
-        return {
-            'search_result_count': search_results_count,
-            'posts': posts,
-            'post_comments': post_comments
-        }
+        return post_comments
     except Exception as e:
         print(f"Error: {e}")
     finally:
         await reddit.close()
 
 
-async def main():
-    response = await scrape('best keyboards')
-    comments_df = pd.DataFrame(response['post_comments'])
-    print("Total search results: ", response['search_result_count'])
-    print("Total number of comments: ", comments_df.size)
+async def main(query):
+    response = await scrape(query)
+    # print(response)
+    # save_to_csv(response)
+    comments_df = pd.DataFrame(response)
+    comments_df.to_csv(f'{query}.csv')
+    # print("Total search results: ", response['search_result_count'])
+    # print("Total number of comments: ", comments_df.size)
 
 
 if __name__ == "__main__":
-    # print(sys.argv[1], sys.argc)
-    asyncio.run(main())
+    query = input("Search for: ")
+    asyncio.run(main(query))
